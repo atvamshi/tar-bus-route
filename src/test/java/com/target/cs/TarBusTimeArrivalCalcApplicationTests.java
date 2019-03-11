@@ -1,4 +1,4 @@
-package com.target.case.study.tarbustimearrivalcalc;
+package com.target.cs;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
