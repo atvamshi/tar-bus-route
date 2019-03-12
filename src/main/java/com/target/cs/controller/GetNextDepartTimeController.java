@@ -26,9 +26,7 @@ public class GetNextDepartTimeController {
     @Autowired
     private NextAvailiableBusServiceTimeCalc nextAvailiableBusServiceTimeCalc;
 
-    @GetMapping(path = "/bus/{route}/{direction}/{stop}"
-//            , produces = {MediaType.APPLICATION_STREAM_JSON_VALUE}
-    )
+    @GetMapping(path = "/bus/{route}/{direction}/{stop}")
     @ResponseBody
     public String getNextBusTime(@PathVariable String route,
                                  @PathVariable String direction,

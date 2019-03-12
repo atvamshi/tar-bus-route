@@ -17,7 +17,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Project: tar-bus-time-arrival-calc
@@ -33,17 +35,29 @@ import java.util.stream.Collectors;
 @Service
 public class NextAvailiableBusServiceTimeCalcImpl implements NextAvailiableBusServiceTimeCalc {
 
-    static final  Logger LOGGER = LoggerFactory.getLogger(NextAvailiableBusServiceTimeCalcImpl.class);
+    public static final String routesMultipleMessage = "Multiple routeNames found ";
 
     private AllRoutesService allRoutesService;
 
     private StopsService stopsService;
 
     private TimePointDeparturesService timePointDeparturesService;
+    public static final String routesNotFoundMessage = "No routeNames found ";
+    public static final String stopsMultipleMessage = "Multiple stops found ";
+    public static final String stopsNotFoundMessage = "No stops found ";
+    public static final String noBusesMessage = "No buses found for the duration route , stop";
+    public static final String oopsMessaage = "!Oops you just missed your Bus, hit again to check the next available bus time!!!";
+    public static final String invalidRouteMessage = "Invalid route name";
+    public static final String invalidStopMessage = "Invalid stop name";
+    public static final String invalidDirectionMessage = "Invalid direction specified direction can only be EAST, WEST, NORTH, SOUTH";
+    static final Logger LOGGER = LoggerFactory.getLogger(NextAvailiableBusServiceTimeCalcImpl.class);
+    private static final String routePattern = "^[a-zA-Z0-9|(\\s\\-\\*\\#\\$\\&)]{5,500}";
+    private static final String stopPattern = "^[a-zA-Z0-9|(\\s\\-\\*\\#\\$\\&)]{5,500}";
+    private static final String dateTimeFormat = "yyyy-MM-dd'T'HH:mm:ss";
 
     @Autowired
-    public NextAvailiableBusServiceTimeCalcImpl (AllRoutesService allRoutesService,
-                StopsService stopsService, TimePointDeparturesService timePointDeparturesService){
+    public NextAvailiableBusServiceTimeCalcImpl(AllRoutesService allRoutesService,
+                                                StopsService stopsService, TimePointDeparturesService timePointDeparturesService) {
         this.allRoutesService = allRoutesService;
         this.stopsService = stopsService;
         this.timePointDeparturesService = timePointDeparturesService;
@@ -52,6 +66,24 @@ public class NextAvailiableBusServiceTimeCalcImpl implements NextAvailiableBusSe
 
     @Override
     public String getNextDepartTime(String routeName, String directionId, String stopName) {
+
+        //validate params
+        //
+
+        if (!checkPattern(routeName, routePattern)) {
+            return invalidRouteMessage;
+        }
+
+        if (!checkPattern(stopName, stopPattern)) {
+            return invalidStopMessage;
+        }
+
+        List<AppConstants> finalDirectionList = Stream.of(AppConstants.values()).filter(e ->
+                e.getDirection().trim().equalsIgnoreCase(directionId.trim())).collect(Collectors.toList());
+
+        if (finalDirectionList.isEmpty()) {
+            return invalidDirectionMessage;
+        }
 
         final String DIRECTION = AppConstants.valueOf(directionId.trim().toUpperCase()).getValue();
 
@@ -63,7 +95,16 @@ public class NextAvailiableBusServiceTimeCalcImpl implements NextAvailiableBusSe
                 .contains(routeName.trim().toLowerCase())).collect(Collectors.toList());
 
         //Check if route more than one
-        checkAnOccuranceAndFail("Multiple routeNames found " + routeName, 1, filteredRoutes);
+        if (filteredRoutes.size() > 1) {
+            final String logMsg = routesMultipleMessage + routeName;
+            LOGGER.error(logMsg);
+            return routesMultipleMessage + routeName;
+        } else if (filteredRoutes.isEmpty()) {
+            final String logMsg = routesNotFoundMessage + routeName;
+            LOGGER.error(logMsg);
+            return logMsg;
+        }
+
 
         //Get stops of routes and direction
         List<StopsVO> stopsList = stopsService.getStopsByRouteIdAndDirection(filteredRoutes.get(0).getRoute(),
@@ -74,34 +115,56 @@ public class NextAvailiableBusServiceTimeCalcImpl implements NextAvailiableBusSe
                 .collect(Collectors.toList());
 
         //Check if stops are more than one
-        checkAnOccuranceAndFail( "Multiple stops found " + stopName, 1, filteredStops);
+        if (filteredStops.size() > 1) {
+            final String logMsg = stopsMultipleMessage + routeName;
+            LOGGER.error(logMsg);
+            return logMsg;
+        } else if (filteredStops.isEmpty()) {
+            final String logMsg = stopsNotFoundMessage + routeName;
+            LOGGER.error(logMsg);
+            return logMsg;
+        }
 
         //Get Time point departures
-        List<TimePointDeparturesVO> timePointDeparturesList = timePointDeparturesService.getTimePointDeparturesByRouteIdDirectionIdAndStopId(filteredRoutes.get(0).getRoute(),
-                DIRECTION,filteredStops.get(0).getValue());
+        List<TimePointDeparturesVO> timePointDeparturesList = timePointDeparturesService
+                .getTimePointDeparturesByRouteIdDirectionIdAndStopId(filteredRoutes.get(0).getRoute(),
+                        DIRECTION, filteredStops.get(0).getValue());
 
         if (timePointDeparturesList.isEmpty()) {
-            throw new NullPointerException("No buses found for the duration route , stop");
+            LOGGER.error(noBusesMessage);
+            return noBusesMessage;
         }
 
         timePointDeparturesList.sort(Comparator.comparing(TimePointDeparturesVO::getDepartureTime));
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateTimeFormat);
 
 
         LocalDateTime departDateTime = LocalDateTime.parse(timePointDeparturesList.get(0).getDepartureTime(), formatter);
 
         LocalDateTime currentTime = LocalDateTime.now();
 
-        return String.valueOf(currentTime.until(departDateTime, ChronoUnit.MINUTES));
+        long diffInMinutes = currentTime.until(departDateTime, ChronoUnit.MINUTES);
+
+        if (diffInMinutes == 0) {
+            LOGGER.error(oopsMessaage);
+            return oopsMessaage;
+        }
+
+        return diffInMinutes + " Minutes";
 
     }
 
-
-    private void checkAnOccuranceAndFail(String message, int greaterOccurance, List list){
-        if(list.size() > greaterOccurance){
-            throw new NullPointerException(message);
-        }
+    /**
+     * Helper method
+     *
+     * @param actString
+     * @param regEx
+     * @return
+     */
+    private boolean checkPattern(String actString, String regEx) {
+        Pattern pattern = Pattern.compile(regEx);
+        return pattern.matcher(actString).find();
     }
 
 }
