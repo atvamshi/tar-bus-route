@@ -33,7 +33,6 @@ public class TimePointDeparturesVO {
     private String departureText;
 
     @JsonProperty(value = "DepartureTime")
-//    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss a z")
     private String departureTime;
 
     @JsonProperty(value = "Description")
