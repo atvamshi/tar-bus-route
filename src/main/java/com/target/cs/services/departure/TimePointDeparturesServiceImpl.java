@@ -1,18 +1,24 @@
 package com.target.cs.services.departure;
 
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.target.cs.vo.TimePointDeparturesVO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Project: tar-bus-time-arrival-calc
@@ -27,6 +33,8 @@ import java.util.Objects;
  */
 @Component
 public class TimePointDeparturesServiceImpl implements TimePointDeparturesService {
+
+    private final Logger LOGGER = LoggerFactory.getLogger(TimePointDeparturesServiceImpl.class);
 
 
     @Value("${app.service.time.departure.url}")
@@ -45,17 +53,31 @@ public class TimePointDeparturesServiceImpl implements TimePointDeparturesServic
 
         Map<String, String> headers = new HashMap() {
             {
-                put("Accept", MediaType.APPLICATION_JSON_VALUE);
-                put("Content-Type", MediaType.APPLICATION_JSON_VALUE);
+                put("Accept", MediaType.APPLICATION_PROBLEM_XML_VALUE);
+                put("Content-Type", MediaType.APPLICATION_PROBLEM_XML_VALUE);
             }
         };
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setAll(headers);
 
-        List<TimePointDeparturesVO> response = Arrays.asList(Objects.requireNonNull(restTemplate.getForObject(timePointDeparturesUri
+        HttpEntity<String> httpEntity = new HttpEntity<>(httpHeaders);
+
+        ResponseEntity<String> response = restTemplate.exchange(timePointDeparturesUri
                 .replace("{ROUTE}",routeId).replace("{DIRECTION}",directionId)
-                .replace("{STOP}",stopId), TimePointDeparturesVO[].class, httpHeaders)));
-        return response;
+                .replace("{STOP}", stopId), HttpMethod.GET, httpEntity, String.class);
+
+
+        List<TimePointDeparturesVO> responseList = null;
+        try {
+
+            XmlMapper xmlMapper = new XmlMapper();
+            responseList = Arrays.asList(xmlMapper.readValue(response.getBody(), TimePointDeparturesVO[].class));
+
+        } catch (IOException e) {
+            LOGGER.error("IOException in getTimePointDeparturesByRouteIdDirectionIdAndStopId", e);
+        }
+
+        return responseList;
     }
 }

@@ -26,19 +26,15 @@ public class GetNextDepartTimeController {
     @Autowired
     private NextAvailiableBusServiceTimeCalc nextAvailiableBusServiceTimeCalc;
 
-    @GetMapping(path = "/bus/{route}/{direction}/{stop}")
+    @GetMapping(path = "/bus/{route}/{direction}/{stop}"
+//            , produces = {MediaType.APPLICATION_STREAM_JSON_VALUE}
+    )
     @ResponseBody
     public String getNextBusTime(@PathVariable String route,
                                  @PathVariable String direction,
-                                 @PathVariable String stop ) {
+                                 @PathVariable String stop) {
 
-        //Validate parameters
-
-
-        //doService
-        nextAvailiableBusServiceTimeCalc.getNextDepartTime(route, direction, stop);
-
-        return "Implementing";
+        return nextAvailiableBusServiceTimeCalc.getNextDepartTime(route, direction, stop);
 
     }
 

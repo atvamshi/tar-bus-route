@@ -12,9 +12,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalTime;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -75,37 +76,24 @@ public class NextAvailiableBusServiceTimeCalcImpl implements NextAvailiableBusSe
         //Check if stops are more than one
         checkAnOccuranceAndFail( "Multiple stops found " + stopName, 1, filteredStops);
 
-
         //Get Time point departures
         List<TimePointDeparturesVO> timePointDeparturesList = timePointDeparturesService.getTimePointDeparturesByRouteIdDirectionIdAndStopId(filteredRoutes.get(0).getRoute(),
                 DIRECTION,filteredStops.get(0).getValue());
 
+        if (timePointDeparturesList.isEmpty()) {
+            throw new NullPointerException("No buses found for the duration route , stop");
+        }
+
         timePointDeparturesList.sort(Comparator.comparing(TimePointDeparturesVO::getDepartureTime));
 
-
-        Date d = new Date("/Date(1224043200000)/".substring(6, -2));
-
-
-//        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-dd-MM HH:mm:ss");
-
-//        try {
-//            sdf.parse(timePointDeparturesList.get(0).getDepartureTime());
-//        } catch (ParseException e) {
-////            e.printStackTrace();
-//        }
-
-//        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm a z")
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
 
-                LOGGER.info("Calculating time difference" +
-                (Integer.valueOf(LocalTime.now().getMinute())-Integer.valueOf(timePointDeparturesList.get(0).getDepartureText())));
+        LocalDateTime departDateTime = LocalDateTime.parse(timePointDeparturesList.get(0).getDepartureTime(), formatter);
 
+        LocalDateTime currentTime = LocalDateTime.now();
 
-//        LocalTime.now().getMinute()
-
-
-
-        return null;
+        return String.valueOf(currentTime.until(departDateTime, ChronoUnit.MINUTES));
 
     }
 

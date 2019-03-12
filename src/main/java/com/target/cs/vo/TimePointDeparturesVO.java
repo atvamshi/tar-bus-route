@@ -22,11 +22,12 @@ import org.springframework.stereotype.Component;
 public class TimePointDeparturesVO {
 
 
+
     @JsonProperty(value = "Actual")
-    private Boolean actual;
+    private String actual;
 
     @JsonProperty(value = "BlockNumber")
-    private Integer blockNumber;
+    private String blockNumber;
 
     @JsonProperty(value = "DepartureText")
     private String departureText;
@@ -51,12 +52,14 @@ public class TimePointDeparturesVO {
     private String terminal;
 
     @JsonProperty(value = "VehicleHeading")
-    private Integer vehicleHeading;
+    private String vehicleHeading;
 
     @JsonProperty(value = "VehicleLatitude")
-    private Integer vehicleLatitude;
+    private String vehicleLatitude;
 
     @JsonProperty(value = "VehicleLongitude")
-    private Integer vehicleLongitude;
+    private String vehicleLongitude;
 
 }
+
+

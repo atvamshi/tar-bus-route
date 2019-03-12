@@ -17,6 +17,7 @@ import java.util.List;
  */
 public interface TimePointDeparturesService {
 
-    List<TimePointDeparturesVO> getTimePointDeparturesByRouteIdDirectionIdAndStopId(String routeId, String directionId, String stopId);
+    List<TimePointDeparturesVO> getTimePointDeparturesByRouteIdDirectionIdAndStopId(
+            String routeId, String directionId, String stopId);
 
 }
